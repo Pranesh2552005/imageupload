@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Image to S3</title>
+  <style>
+    /* General styles */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Card styles */
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    /* Form styles */
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    input[type="file"] {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px;
+      font-size: 16px;
+      color: #fff;
+      background-color: #007bff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Uploaded image styles */
+    #uploadedImage {
+      max-width: 25%;
+      margin-top: 20px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    /* Gallery styles */
+    #imageGallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+    }
+    #imageGallery img {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+    #imageGallery img:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Upload Image to S3</h1>
+    
+    <!-- Image Upload Form -->
+    <div class="card">
+      <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="image" id="image" required>
+        <button type="submit">Upload</button>
+      </form>
+    </div>
+
+    <!-- Uploaded Image -->
+    <h2>Uploaded Image:</h2>
+    <div>
+      <img id="uploadedImage" />
+    </div>
+
+    <!-- Image Gallery -->
+    <h2>All Images in S3:</h2>
+    <div id="imageGallery"></div>
+  </div>
+
+  <script>
+    // Handle the image upload form submission
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData();
+      formData.append('image', document.getElementById('image').files[0]);
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Uploaded Image URL:', data.imageUrl);
+
+          // Display the uploaded image
+          const imageUrl = data.imageUrl;
+          const uploadedImage = document.getElementById('uploadedImage');
+          uploadedImage.src = imageUrl;
+          uploadedImage.style.display = 'block';
+
+          // Load the list of all images in the bucket after uploading
+          loadImages(); 
+        } else {
+          alert('Failed to upload image');
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('An error occurred while uploading the image');
+      }
+    });
+
+    // Function to fetch and display all images in the S3 bucket
+    async function loadImages() {
+      try {
+        const response = await fetch('/images');
+        if (response.ok) {
+          const imageUrls = await response.json();
+          const gallery = document.getElementById('imageGallery');
+          gallery.innerHTML = ''; // Clear any previous images
+          
+          imageUrls.forEach((url) => {
+            const img = document.createElement('img');
+            img.src = url;
+            gallery.appendChild(img);
+          });
+        } else {
+          alert('Failed to load images');
+        }
+      } catch (error) {
+        console.error('Error loading images:', error);
+        alert('An error occurred while loading images');
+      }
+    }
+
+    // Load images on page load
+    window.onload = loadImages;
+  </script>
+</body>
+</html>
